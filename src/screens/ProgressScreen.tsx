@@ -1,18 +1,29 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Dimensions } from 'react-native';
 import { Text, Surface, SegmentedButtons, Card, DataTable, Button } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { LineChart } from 'react-native-chart-kit';
 
 export default function ProgressScreen() {
-  const [timeRange, setTimeRange] = React.useState('week');
+  const [timeRange, setTimeRange] = useState('week');
+  const [dimensions, setDimensions] = useState(Dimensions.get('window'));
+  const [isChartReady, setIsChartReady] = useState(false);
+
+  useEffect(() => {
+    setIsChartReady(true);
+    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+      setDimensions(window);
+    });
+    return () => subscription?.remove();
+  }, []);
 
   const chartData = {
     labels: ["Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom"],
     datasets: [
       {
-        data: [450, 500, 0, 600, 450, 700, 500],
+        data: [450, 500, 450, 600, 450, 700, 500],
         color: (opacity = 1) => `rgba(255, 69, 0, ${opacity})`,
+        strokeWidth: 2,
       }
     ]
   };
@@ -29,30 +40,72 @@ export default function ProgressScreen() {
     { exercise: 'Peso Muerto', weight: '120 kg', date: '2024-01-15' },
   ];
 
+  const renderChart = () => {
+    if (!isChartReady) return null;
+
+    try {
+      return (
+        <LineChart
+          data={chartData}
+          width={dimensions.width - 32}
+          height={220}
+          chartConfig={{
+            backgroundColor: '#ffa500',
+            backgroundGradientFrom: '#ffa500',
+            backgroundGradientTo: '#ffa500',
+            decimalPlaces: 0,
+            color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+            labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+            propsForDots: {
+              r: "4",
+              strokeWidth: "2",
+              stroke: "#000"
+            },
+            propsForBackgroundLines: {
+              strokeWidth: 1,
+              stroke: "rgba(0, 0, 0, 0.1)",
+            }
+          }}
+          bezier
+          style={styles.chart}
+          withDots={true}
+          withShadow={false}
+          withInnerLines={true}
+          withOuterLines={true}
+        />
+      );
+    } catch (error) {
+      console.log('Error rendering chart:', error);
+      return (
+        <View style={styles.chartError}>
+          <Text>No se pudo cargar el gráfico</Text>
+        </View>
+      );
+    }
+  };
+
   return (
     <ScrollView style={styles.container}>
-      {/* Selector de rango de tiempo */}
       <SegmentedButtons
         value={timeRange}
         onValueChange={setTimeRange}
         buttons={[
-            { value: 'week', label: 'Semana' },
-            { value: 'month', label: 'Mes' },
-            { value: 'year', label: 'Año' },
+          { value: 'week', label: 'Semana' },
+          { value: 'month', label: 'Mes' },
+          { value: 'year', label: 'Año' },
         ]}
         style={styles.segmentedButtons}
         theme={{
-            colors: {
+          colors: {
             secondaryContainer: '#ffa500',
             onSecondaryContainer: 'black',
             primary: 'black',
-            onSurface: 'black',  
-            outline: 'black'     
-            }
+            onSurface: 'black',
+            outline: 'black'
+          }
         }}
-        />
+      />
 
-      {/* Resumen de estadísticas */}
       <Surface style={styles.statsContainer} elevation={1}>
         <View style={styles.statsGrid}>
           <View style={styles.statItem}>
@@ -73,32 +126,13 @@ export default function ProgressScreen() {
         </View>
       </Surface>
 
-      {/* Gráfico de progreso */}
       <Card style={styles.chartCard}>
         <Card.Content>
           <Text style={styles.sectionTitle}>Calorías Quemadas</Text>
-          <LineChart
-            data={chartData}
-            width={Dimensions.get('window').width - 32}
-            height={220}
-            chartConfig={{
-              backgroundColor: '#ffa500',
-              backgroundGradientFrom: '#ffa500',
-              backgroundGradientTo: '#ffa500',
-              decimalPlaces: 0,
-              color: () => `black`,
-              labelColor: () => `black`,
-              style: {
-                borderRadius: 16,
-              },
-            }}
-            bezier
-            style={styles.chart}
-          />
+          {renderChart()}
         </Card.Content>
       </Card>
 
-      {/* Récords personales */}
       <Card style={styles.card}>
         <Card.Content>
           <Text style={styles.sectionTitle}>Récords Personales</Text>
@@ -120,7 +154,6 @@ export default function ProgressScreen() {
         </Card.Content>
       </Card>
 
-      {/* Historial de entrenamientos */}
       <Card style={styles.card}>
         <Card.Content>
           <Text style={styles.sectionTitle}>Historial de Entrenamientos</Text>
@@ -194,6 +227,13 @@ const styles = StyleSheet.create({
   },
   chart: {
     marginVertical: 8,
+    borderRadius: 16,
+  },
+  chartError: {
+    height: 220,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#ffa500',
     borderRadius: 16,
   },
   card: {
